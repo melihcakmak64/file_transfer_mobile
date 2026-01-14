@@ -16,26 +16,41 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final MediaViewModel mediaViewModel = GetIt.I<MediaViewModel>();
+  final MediaViewModel vm = GetIt.I<MediaViewModel>();
 
   @override
   void initState() {
     super.initState();
 
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      mediaViewModel.fetchFiles(MediaType.values[_tabController.index]);
-    });
+    _tabController.addListener(_onTabChanged);
 
-    mediaViewModel.fetchFiles(MediaType.videos);
+    vm.fetchFiles(MediaType.videos);
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    vm.fetchFiles(MediaType.values[_tabController.index]);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('File Transfer'),
+        title: Observer(
+          builder: (_) => Text(
+            vm.selectedCount > 0
+                ? '${vm.selectedCount} seçili'
+                : 'File Transfer',
+          ),
+        ),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -47,28 +62,49 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: Observer(
         builder: (_) {
-          if (mediaViewModel.homeState == HomeState.loading) {
+          if (vm.homeState == HomeState.loading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (mediaViewModel.homeState == HomeState.idle &&
-              mediaViewModel.folders.isEmpty) {
+          if (vm.homeState == HomeState.idle && vm.folders.isEmpty) {
             return const Center(child: Text('Dosyalara erişim izni gerekli'));
           }
 
-          return ListView(
-            children: mediaViewModel.folders.entries.map((entry) {
-              return ListTile(
-                leading: const Icon(Icons.folder),
-                title: Text(entry.key),
-                subtitle: Text('${entry.value.length} item'),
-                onTap: () {
-                  context.router.push(
-                    FolderDetailRoute(title: entry.key, assets: entry.value),
+          return ListView.separated(
+            itemCount: vm.folders.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (_, index) {
+              final entry = vm.folders.entries.elementAt(index);
+              final folderName = entry.key;
+              final assets = entry.value;
+
+              return Observer(
+                builder: (_) {
+                  final isSelected = vm.isFolderSelected(folderName);
+                  final isPartial = vm.isFolderPartiallySelected(folderName);
+
+                  return ListTile(
+                    leading: Checkbox(
+                      tristate: true,
+                      value: isSelected
+                          ? true
+                          : isPartial
+                          ? null
+                          : false,
+                      onChanged: (_) => vm.toggleFolder(folderName),
+                    ),
+                    title: Text(folderName),
+                    subtitle: Text('${assets.length} öğe'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      context.router.push(
+                        FolderDetailRoute(title: folderName, assets: assets),
+                      );
+                    },
                   );
                 },
               );
-            }).toList(),
+            },
           );
         },
       ),
