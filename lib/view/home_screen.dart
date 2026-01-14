@@ -33,34 +33,30 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Observer(
-      builder: (_) {
-        if (mediaViewModel.homeState == HomeState.loading) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('File Transfer'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Videos'),
+            Tab(text: 'Music'),
+            Tab(text: 'Images'),
+          ],
+        ),
+      ),
+      body: Observer(
+        builder: (_) {
+          if (mediaViewModel.homeState == HomeState.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        if (mediaViewModel.homeState == HomeState.idle &&
-            mediaViewModel.folders.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Dosyalara erişim izni gerekli')),
-          );
-        }
+          if (mediaViewModel.homeState == HomeState.idle &&
+              mediaViewModel.folders.isEmpty) {
+            return const Center(child: Text('Dosyalara erişim izni gerekli'));
+          }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('File Transfer'),
-            bottom: TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Videos'),
-                Tab(text: 'Music'),
-                Tab(text: 'Images'),
-              ],
-            ),
-          ),
-          body: ListView(
+          return ListView(
             children: mediaViewModel.folders.entries.map((entry) {
               return ListTile(
                 leading: const Icon(Icons.folder),
@@ -73,9 +69,9 @@ class _HomeScreenState extends State<HomeScreen>
                 },
               );
             }).toList(),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
